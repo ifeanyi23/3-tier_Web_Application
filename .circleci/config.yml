@@ -48,9 +48,9 @@ jobs:
       - run:
           name: Create network infrastructure
           command: |
-              aws cloudformation deploy \
-              --template-file 3-tier_Web_Application/network-infra.yml \
-              --parameters-file 3-tier_Web_Application/network-infra.json \
+              aws cloudformation create-stack \
+              --template-body file:///3-tier_Web_Application/network-infra.yml \
+              --parameters file:///3-tier_Web_Application/network-infra.json \
               --tags project=network-infra \
               --stack-name "Network-infra-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
@@ -64,9 +64,9 @@ jobs:
       - run:
           name: Create web tier
           command: |
-              aws cloudformation deploy \
-              --template-file 3-tier_Web_Application/web-tier.yml \
-              --parameters-file 3-tier_Web_Application/web-tier.json \
+              aws cloudformation create-stack \
+              --template-body file:///3-tier_Web_Application/web-tier.yml \
+              --parameters file:///3-tier_Web_Application/web-tier.json \
               --tags project=web-tier \
               --stack-name "WebTier-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
