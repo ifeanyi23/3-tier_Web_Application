@@ -187,7 +187,7 @@ Resources:
     #         - Key: Name
     #           Value: !Sub "${EnvironmentName}-Jumpbox-2"
           
-    #To do list
+    #To do listt
     
 Outputs: 
     AppTierLoadBalancerDNSName: 
@@ -197,7 +197,7 @@ Outputs:
           - - "http://"
             - !GetAtt AppTierLoadBalancer.DNSName
         Export:
-          Name: !Sub ${EnvironmentName}-ELB-DNS-Name
+          Name: !Sub ${EnvironmentName}-AppTier-ELB-DNS-Name
     
     
     
