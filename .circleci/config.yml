@@ -48,7 +48,7 @@ jobs:
       - run:
           name: Create network infrastructure
           command: |
-              aws cloudformation create-stack \
+              aws cloudformation deploy \
               --template-file 3-tier_Web_Application/network-infra.yml \
               --tags project=network-infra \
               --stack-name "Network-infra-${CIRCLE_WORKFLOW_ID:0:7}" \
