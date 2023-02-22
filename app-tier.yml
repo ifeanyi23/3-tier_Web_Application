@@ -43,7 +43,8 @@ Resources:
             FromPort: 80
             ToPort: 80
             SourceSecurityGroupId:
-            - Fn::ImportValue: !Sub "${EnvironmentName}-WEB-SERVER-SG"
+               Fn::ImportValue: 
+                 !Sub "${EnvironmentName}-WEB-SERVER-SG"
               
         SecurityGroupEgress:
           - IpProtocol: -1
