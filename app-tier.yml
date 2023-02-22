@@ -68,7 +68,8 @@ Resources:
               FromPort: 22
               ToPort: 22
               SourceSecurityGroupId:
-              - Fn::ImportValue: !Sub "${EnvironmentName}-JUMP-BOX-SG"
+                Fn::ImportValue: 
+                    !Sub "${EnvironmentName}-JUMP-BOX-SG"
           SecurityGroupEgress: 
             - IpProtocol: -1
               FromPort: -1
