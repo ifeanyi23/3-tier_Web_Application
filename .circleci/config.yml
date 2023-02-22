@@ -17,8 +17,6 @@ commands:
           name: Destroy environments
           when: on_fail
           command: |
-            # Empty frontend bucket
-            aws s3 rm s3://udapeople-<<parameters.Workflow_ID>> --recursive
             # Delete network-infra stack
             aws cloudformation delete-stack --stack-name Network-infra-<<parameters.Workflow_ID>>
             # Delete WebTier stack

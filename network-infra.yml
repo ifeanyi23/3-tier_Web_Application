@@ -213,7 +213,7 @@ Resources:
     PrivateSubnet3RouteTableAssociation:
         Type: AWS::EC2::SubnetRouteTableAssociation
         Properties:
-            RouteTableId: !Ref PrivateRouteTable3
+            RouteTableId: !Ref PrivateRouteTable1
             SubnetId: !Ref PrivateSubnet3
             
     # Route table for App tier and Database in a Az2
