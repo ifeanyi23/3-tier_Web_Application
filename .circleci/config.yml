@@ -84,9 +84,9 @@ jobs:
               --tags project=app-tier \
               --stack-name "AppTier-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
-      - destroy-environment     
+    #   - destroy-environment     
      
-      # - destroy-environmentttttttt
+      # - destroy-environmenttttttttt
 
   
   
