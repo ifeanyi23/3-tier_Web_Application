@@ -190,7 +190,7 @@ Resources:
     #To do list
     
 Outputs: 
-    WebAppLoadBalancerDNSName: 
+    AppTierLoadBalancerDNSName: 
         Description: DNS Name of the apptier application
         Value: !Join
           - ""
