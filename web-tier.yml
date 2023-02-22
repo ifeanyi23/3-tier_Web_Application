@@ -26,7 +26,7 @@ Parameters:
 
     JumpboxKeyName:
         Type: String
-        Default: "jumpboxKey"
+        Default: "bastion-key"
         
         
         
@@ -184,7 +184,7 @@ Resources:
         Properties:
           InstanceType: t2.micro
           ImageId: ami-0692dea0a2f8a1b35
-          KeyName: !Ref bastion-key
+          KeyName: !Ref JumpboxKeyName
           SecurityGroupIds:
             - !Ref JumpboxSecurityGroup
           SubnetId:
@@ -197,7 +197,7 @@ Resources:
         Properties:
           InstanceType: t2.micro
           ImageId: ami-0692dea0a2f8a1b35
-          KeyName: !Ref bastion-key
+          KeyName: !Ref JumpboxKeyName
           SecurityGroupIds:
             - !Ref JumpboxSecurityGroup
           SubnetId:
