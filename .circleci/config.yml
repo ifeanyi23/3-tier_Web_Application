@@ -1,0 +1,91 @@
+version: 2.1
+orbs: 
+    slack: circleci/slack@4.10.1
+
+    
+
+commands:
+  destroy-environment:
+    description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
+    parameters:
+      # Add parameter here yuppp
+      Workflow_ID:
+        type: string
+        default: ${CIRCLE_WORKFLOW_ID:0:7}  
+    steps:
+      - run:
+          name: Destroy environments
+          when: on_fail
+          command: |
+            # Empty frontend bucket
+            aws s3 rm s3://udapeople-<<parameters.Workflow_ID>> --recursive
+            # Delete network-infra stack
+            aws cloudformation delete-stack --stack-name Network-infra-<<parameters.Workflow_ID>>
+            # Delete WebTier stack
+            aws cloudformation delete-stack --stack-name WebTier-<<parameters.Workflow_ID >>
+
+  install_awscli:
+        description: Install AWS CLI v2
+        steps:
+          - run:
+              name: Install AWS CLI v2
+              command: |
+                curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                unzip awscliv2.zip
+                sudo ./aws/install
+  
+
+  
+            
+jobs:
+
+  deploy-network-infrastructure:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - install_awscli
+      - run:
+          name: Create network infrastructure
+          command: |
+              aws cloudformation deploy \
+              --template-file 3-tier_Web_Application/network-infra.yml \
+              --parameters-file 3-tier_Web_Application/network-infra.json \
+              --tags project=network-infra \
+              --stack-name "Network-infra-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+      - destroy-environment     
+  deploy-web-tier:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - install_awscli
+      - run:
+          name: Create web tier
+          command: |
+              aws cloudformation deploy \
+              --template-file 3-tier_Web_Application/web-tier.yml \
+              --parameters-file 3-tier_Web_Application/web-tier.json \
+              --tags project=web-tier \
+              --stack-name "WebTier-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+      - destroy-environment     
+     
+      # - destroy-environmenttt
+
+  
+  
+
+
+      
+
+      
+              
+workflows:
+  infra-workflow:
+    jobs:
+      - deploy-network-infrastructure
+      - deploy-web-tier:
+          requires: [deploy-network-infrastructure]
+          

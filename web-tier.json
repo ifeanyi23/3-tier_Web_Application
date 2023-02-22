@@ -1,0 +1,26 @@
+[
+	{
+		"ParameterKey": "EnvironmentName",
+		"ParameterValue": "MyHighAvailabilityApp"
+	},
+	{
+		"ParameterKey": "MinCapacity",
+		"ParameterValue": "2"
+	},
+	{
+		"ParameterKey": "MaxCapacity",
+		"ParameterValue": "4"
+	},
+	{
+		"ParameterKey": "DesiredCapacity",
+		"ParameterValue": "2"
+	},
+	{
+		"ParameterKey": "CPUPolicyTargetValue",
+		"ParameterValue": "40"
+	},
+	{
+		"ParameterKey": "JumpboxKeyName",
+		"ParameterValue": "jumpboxKey"
+	}
+]

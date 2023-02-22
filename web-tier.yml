@@ -1,0 +1,221 @@
+Parameters:
+    ID:
+        Description: Unique identifier.
+        Type: String
+
+    EnvironmentName:
+        Description: An environment name that will be prefixed to resource names
+        Type: String
+        
+    MinCapacity:
+        Type: String
+        Default: "2"
+
+    MaxCapacity:
+        Type: String
+        Default: "4"
+
+    DesiredCapacity:
+        Type: String
+        Default: "2"
+
+    CPUPolicyTargetValue:
+        Type: Number
+        Default: 40
+
+    JumpboxKeyName:
+        Type: String
+        Default: "jumpboxKey"
+        
+        
+        
+Resources:
+    LoadBalancerSecGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Allow http into our load balancer
+        VpcId:
+          Fn::ImportValue:
+            !Sub "${EnvironmentName}-VPCID"
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+
+        SecurityGroupEgress:
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+
+    JumpboxSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        VpcId:
+          Fn::ImportValue: !Sub "${EnvironmentName}-VPCID"
+        GroupDescription: Allow SSH from anywhere
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: 0.0.0.0/0
+
+    WebServerSecGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: ApplicationLoadBalancer to web tiers
+          VpcId:
+            Fn::ImportValue:
+              !Sub "${EnvironmentName}-VPCID"
+          SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              SourceSecurityGroupId: !Ref LoadBalancerSecGroup
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              SourceSecurityGroupId: !Ref JumpboxSecurityGroup
+          SecurityGroupEgress: 
+            - IpProtocol: -1
+              FromPort: -1
+              ToPort: -1
+              CidrIp: 0.0.0.0/0
+              
+    #Web tier infrascture, This will be an ASG, Launchconfig, some autoscaling alarms and scaling polices.
+    WebAppLaunchConfig:
+        Type: AWS::AutoScaling::LaunchConfiguration
+        Properties:
+          UserData:
+            Fn::Base64: !Sub |
+              #!/bin/bash
+              apt-get update -y
+              apt-get install apache2 -y
+              systemctl start apache2.service
+              cd /var/www/html
+              apt install awscli
+              echo '<h1>Hello World</h1>' > /var/www/html/index.html       
+          # ToDo: AMI ID of Ubuntu Linux machine. Too get one, try creating a VM from the web console. 
+          ImageId: ami-0692dea0a2f8a1b35
+          KeyName: webtier-key
+          SecurityGroups:
+            - Ref: WebServerSecGroup
+        #   IamInstanceProfile: !Ref WebServerInstanceProfile
+          InstanceType: t3.small
+          BlockDeviceMappings:
+          - DeviceName: "/dev/sdk"
+            Ebs:
+              VolumeSize: '10'
+    # Creates autoscaling group        
+    WebAppGroup:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties:
+          VPCZoneIdentifier:
+          - Fn::ImportValue: 
+              !Sub "${EnvironmentName}-PUB-NETS"
+          LaunchConfigurationName:
+            Ref: WebAppLaunchConfig
+          MinSize: !Ref MinCapacity
+          MaxSize: !Ref MaxCapacity
+          DesiredCapacity: !Ref DesiredCapacity
+          TargetGroupARNs:
+            - Ref: WebAppTargetGroup
+    WebAppCPUScalingPolicy:
+        Type: AWS::AutoScaling::ScalingPolicy
+        Properties:
+          AutoScalingGroupName: !Ref WebAppGroup
+          PolicyType: TargetTrackingScaling
+          TargetTrackingConfiguration:
+            PredefinedMetricSpecification:
+              PredefinedMetricType: ASGAverageCPUUtilization
+            TargetValue: !Ref CPUPolicyTargetValue
+    # Creates target groups for the load balancer //more like http settings in azure
+    WebAppTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+          HealthCheckIntervalSeconds: 10
+          HealthCheckEnabled: true
+          HealthCheckPath: /
+          HealthCheckProtocol: HTTP
+          HealthCheckTimeoutSeconds: 8
+          HealthyThresholdCount: 2
+          Port: 80
+          Protocol: HTTP
+          UnhealthyThresholdCount: 5
+          VpcId: 
+            Fn::ImportValue:
+              Fn::Sub: "${EnvironmentName}-VPCID"
+    WebAppLoadBalancer:
+        Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+        Properties:
+          Subnets:
+          - Fn::ImportValue: !Sub "${EnvironmentName}-PUBLIC-SUBNET-1"
+          - Fn::ImportValue: !Sub "${EnvironmentName}-PUBLIC-SUBNET-2"
+          SecurityGroups:
+          - Ref: LoadBalancerSecGroup
+    WebAppLoadBalancerListener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        Properties:
+          DefaultActions:
+          - Type: forward
+            TargetGroupArn:
+              Ref: WebAppTargetGroup
+          LoadBalancerArn:
+            Ref: WebAppLoadBalancer
+          Port: 80
+          Protocol: HTTP
+    WebAppLoadBalancerListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Properties:
+          Actions:
+            - Type: forward
+              TargetGroupArn: !Ref WebAppTargetGroup
+          Conditions:
+            - Field: path-pattern
+              Values:
+                - "/*"
+          ListenerArn: !Ref WebAppLoadBalancerListener
+          Priority: 1
+          
+    Jumpbox1:
+        Type: AWS::EC2::Instance
+        Properties:
+          InstanceType: t2.micro
+          ImageId: ami-0692dea0a2f8a1b35
+          KeyName: !Ref bastion-key
+          SecurityGroupIds:
+            - !Ref JumpboxSecurityGroup
+          SubnetId:
+            Fn::ImportValue: !Sub "${EnvironmentName}-PUBLIC-SUBNET-1"
+          Tags:
+            - Key: Name
+              Value: !Sub "${EnvironmentName}-Jumpbox-1"
+    Jumpbox2:
+        Type: AWS::EC2::Instance
+        Properties:
+          InstanceType: t2.micro
+          ImageId: ami-0692dea0a2f8a1b35
+          KeyName: !Ref bastion-key
+          SecurityGroupIds:
+            - !Ref JumpboxSecurityGroup
+          SubnetId:
+            Fn::ImportValue: !Sub "${EnvironmentName}-PUBLIC-SUBNET-2"
+          Tags:
+            - Key: Name
+              Value: !Sub "${EnvironmentName}-Jumpbox-2"
+          
+    #To do list
+    
+    Outputs: 
+    WebAppLoadBalancerDNSName: 
+        Description: DNS Name of the web application
+        Value: !Join
+          - ""
+          - - "http://"
+            - !GetAtt WebAppLoadBalancer.DNSName
+        Export:
+          Name: !Sub ${EnvironmentName}-ELB-DNS-Name
+    
+    
+    
