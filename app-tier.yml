@@ -1,0 +1,203 @@
+Parameters:
+    ID:
+        Description: Unique identifier.
+        Type: String
+
+    EnvironmentName:
+        Description: An environment name that will be prefixed to resource names
+        Type: String
+        Default: 3TierWebApplication
+        
+    MinCapacity:
+        Type: String
+        Default: "2"
+
+    MaxCapacity:
+        Type: String
+        Default: "4"
+
+    DesiredCapacity:
+        Type: String
+        Default: "2"
+
+    CPUPolicyTargetValue:
+        Type: Number
+        Default: 40
+
+    APPTierKeyName:
+        Type: String
+        Default: "apptier-key"
+        
+        
+        
+Resources:
+    InternalLoadBalancerSecGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Allow http into our load balancer
+        VpcId:
+          Fn::ImportValue:
+            !Sub "${EnvironmentName}-VPCID"
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            SourceSecurityGroupId:
+            - Fn::ImportValue: !Sub "${EnvironmentName}-WEB-SERVER-SG"
+              
+        SecurityGroupEgress:
+          - IpProtocol: -1
+            FromPort: -1
+            ToPort: -1
+            CidrIp: 0.0.0.0/0
+
+    AppTierSecGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: ApplicationLoadBalancer to web tiers
+          VpcId:
+            Fn::ImportValue:
+              !Sub "${EnvironmentName}-VPCID"
+          SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              SourceSecurityGroupId: !Ref InternalLoadBalancerSecGroup
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              SourceSecurityGroupId:
+              - Fn::ImportValue: !Sub "${EnvironmentName}-JUMP-BOX-SG"
+          SecurityGroupEgress: 
+            - IpProtocol: -1
+              FromPort: -1
+              ToPort: -1
+              CidrIp: 0.0.0.0/0
+              
+    #App tier infrascture, This will be an ASG, Launchconfig, some autoscaling alarms and scaling polices.
+    AppTierLaunchConfig:
+        Type: AWS::AutoScaling::LaunchConfiguration
+        Properties:
+          # ToDo: AMI ID of Ubuntu Linux machine. Too get one, try creating a VM from the web console. 
+          ImageId: ami-0692dea0a2f8a1b35
+          KeyName: !Ref APPTierKeyName
+          SecurityGroups:
+            - Ref: AppTierSecGroup
+        #   IamInstanceProfile: !Ref WebServerInstanceProfile
+          InstanceType: t3.small
+          BlockDeviceMappings:
+          - DeviceName: "/dev/sdk"
+            Ebs:
+              VolumeSize: '10'
+    # Creates autoscaling group        
+    AppTierGroup:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties:
+          VPCZoneIdentifier:
+          - Fn::ImportValue: 
+              !Sub "${EnvironmentName}-APPTIER-PRIV-NETS"
+          LaunchConfigurationName:
+            Ref: AppTierLaunchConfig
+          MinSize: !Ref MinCapacity
+          MaxSize: !Ref MaxCapacity
+          DesiredCapacity: !Ref DesiredCapacity
+          TargetGroupARNs:
+            - Ref: AppTierTargetGroup
+    WebAppCPUScalingPolicy:
+        Type: AWS::AutoScaling::ScalingPolicy
+        Properties:
+          AutoScalingGroupName: !Ref AppTierGroup
+          PolicyType: TargetTrackingScaling
+          TargetTrackingConfiguration:
+            PredefinedMetricSpecification:
+              PredefinedMetricType: ASGAverageCPUUtilization
+            TargetValue: !Ref CPUPolicyTargetValue
+    # Creates target groups for the load balancer //more like http settings in azure
+    AppTierTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+          HealthCheckIntervalSeconds: 10
+          HealthCheckEnabled: true
+          HealthCheckPath: /
+          HealthCheckProtocol: HTTP
+          HealthCheckTimeoutSeconds: 8
+          HealthyThresholdCount: 2
+          Port: 80
+          Protocol: HTTP
+          UnhealthyThresholdCount: 5
+          VpcId: 
+            Fn::ImportValue:
+              Fn::Sub: "${EnvironmentName}-VPCID"
+    AppTierLoadBalancer:
+        Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+        Properties:
+          Subnets:
+          - Fn::ImportValue: !Sub "${EnvironmentName}-PRIVATE-SUBNET-1"
+          - Fn::ImportValue: !Sub "${EnvironmentName}-PRIVATE-SUBNET-2"
+          SecurityGroups:
+          - Ref: InternalLoadBalancerSecGroup
+    AppTierLoadBalancerListener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        Properties:
+          DefaultActions:
+          - Type: forward
+            TargetGroupArn:
+              Ref: AppTierTargetGroup
+          LoadBalancerArn:
+            Ref: AppTierLoadBalancer
+          Port: 80
+          Protocol: HTTP
+    AppTierLoadBalancerListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Properties:
+          Actions:
+            - Type: forward
+              TargetGroupArn: !Ref AppTierTargetGroup
+          Conditions:
+            - Field: path-pattern
+              Values:
+                - "/*"
+          ListenerArn: !Ref AppTierLoadBalancerListener
+          Priority: 1
+          
+    # Jumpbox1:
+    #     Type: AWS::EC2::Instance
+    #     Properties:
+    #       InstanceType: t2.micro
+    #       ImageId: ami-0692dea0a2f8a1b35
+    #       KeyName: !Ref JumpboxKeyName
+    #       SecurityGroupIds:
+    #         - !Ref JumpboxSecurityGroup
+    #       SubnetId:
+    #         Fn::ImportValue: !Sub "${EnvironmentName}-PUBLIC-SUBNET-1"
+    #       Tags:
+    #         - Key: Name
+    #           Value: !Sub "${EnvironmentName}-Jumpbox-1"
+    # Jumpbox2:
+    #     Type: AWS::EC2::Instance
+    #     Properties:
+    #       InstanceType: t2.micro
+    #       ImageId: ami-0692dea0a2f8a1b35
+    #       KeyName: !Ref JumpboxKeyName
+    #       SecurityGroupIds:
+    #         - !Ref JumpboxSecurityGroup
+    #       SubnetId:
+    #         Fn::ImportValue: !Sub "${EnvironmentName}-PUBLIC-SUBNET-2"
+    #       Tags:
+    #         - Key: Name
+    #           Value: !Sub "${EnvironmentName}-Jumpbox-2"
+          
+    #To do list
+    
+Outputs: 
+    WebAppLoadBalancerDNSName: 
+        Description: DNS Name of the apptier application
+        Value: !Join
+          - ""
+          - - "http://"
+            - !GetAtt AppTierLoadBalancer.DNSName
+        Export:
+          Name: !Sub ${EnvironmentName}-ELB-DNS-Name
+    
+    
+    

@@ -277,11 +277,17 @@ Outputs:
         Export:
           Name: !Sub ${EnvironmentName}-PUB-NETS
 
-    PrivateSubnets:
-        Description: A list of the private subnets
-        Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3, !Ref PrivateSubnet4 ]]
+    AppTierPrivateSubnets:
+        Description: A list of the private subnets for app tier
+        Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2]]
         Export:
-          Name: !Sub ${EnvironmentName}-PRIV-NETS
+          Name: !Sub ${EnvironmentName}-APPTIER-PRIV-NETS
+          
+    DBPrivateSubnets:
+        Description: A list of the private subnets for database
+        Value: !Join [ ",", [ !Ref PrivateSubnet3, !Ref PrivateSubnet4 ]]
+        Export:
+          Name: !Sub ${EnvironmentName}-DATABASE-PRIV-NETS
 
     PublicSubnet1:
         Description: Public Subnet 1 ID

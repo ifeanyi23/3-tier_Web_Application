@@ -217,6 +217,19 @@ Outputs:
             - !GetAtt WebAppLoadBalancer.DNSName
         Export:
           Name: !Sub ${EnvironmentName}-ELB-DNS-Name
+          
+          
+    WebServerSecGroup: 
+        Description: A reference to the web server security group
+        Value: !Ref WebServerSecGroup
+        Export:
+          Name: !Sub ${EnvironmentName}-WEB-SERVER-SG
+          
+    JumpboxSecurityGroup: 
+        Description: A reference to the jumpbox security group
+        Value: !Ref JumpboxSecurityGroup
+        Export:
+          Name: !Sub ${EnvironmentName}-JUMP-BOX-SG
     
     
     
