@@ -208,7 +208,7 @@ Resources:
           
     #To do list
     
-    Outputs: 
+Outputs: 
     WebAppLoadBalancerDNSName: 
         Description: DNS Name of the web application
         Value: !Join
