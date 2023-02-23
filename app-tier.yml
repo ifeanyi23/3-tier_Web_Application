@@ -201,5 +201,10 @@ Outputs:
         Export:
           Name: !Sub ${EnvironmentName}-AppTier-ELB-DNS-Name
     
+    AppTierSecGroup: 
+        Description: A reference to the app tier security group
+        Value: !Ref AppTierSecGroup
+        Export:
+          Name: !Sub ${EnvironmentName}-APP-TIER-SG
     
     

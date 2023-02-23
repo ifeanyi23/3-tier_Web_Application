@@ -23,6 +23,8 @@ commands:
             aws cloudformation delete-stack --stack-name WebTier-<<parameters.Workflow_ID >>
             # Delete AppTier stack
             aws cloudformation delete-stack --stack-name AppTier-<<parameters.Workflow_ID >>
+            # Delete DATABASE Tier stack
+            aws cloudformation delete-stack --stack-name DatabaseTier-<<parameters.Workflow_ID >>
 
   install_awscli:
         description: Install AWS CLI v2
@@ -84,18 +86,27 @@ jobs:
               --tags project=app-tier \
               --stack-name "AppTier-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
-    #   - destroy-environment     
+      - destroy-environment
+      
+  deploy-database-tier:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - install_awscli
+      - run:
+          name: Create database tier
+          command: |
+              aws cloudformation deploy \
+              --template-file db-tier.yml \
+              --tags project=db-tier \
+              --stack-name "DatabaseTier-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+      - destroy-environment     
      
       # - destroy-environmenttttttttt
 
   
-  
-
-
-      
-
-      
-              
 workflows:
   infra-workflow:
     jobs:
@@ -104,6 +115,8 @@ workflows:
           requires: [deploy-network-infrastructure]
       - deploy-app-tier:
           requires: [deploy-web-tier]
+      - deploy-database-tier:
+          requires: [deploy-app-tier]
           
     
           
