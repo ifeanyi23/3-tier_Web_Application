@@ -100,7 +100,7 @@ Resources:
         DBInstanceIdentifier: !Ref DBInstanceID
         DBName: !Ref DBName
         DBInstanceClass: !Ref DBInstanceClass
-        VPCSecurityGroups: !Ref DBSecGroup
+        VPCSecurityGroups: [!Ref DBSecGroup]
         DBSubnetGroupName: !Ref myDBSubnetGroup
         AllocatedStorage: !Ref DBAllocatedStorage
         Engine: MySQL
