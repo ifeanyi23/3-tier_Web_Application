@@ -83,15 +83,16 @@ Resources:
             ToPort: -1
             CidrIp: 0.0.0.0/0
             
-    myDBSubnetGroup: 
+    myDBSubnetGroup:
+      Type: "AWS::RDS::DBSubnetGroup"
       Properties: 
         DBSubnetGroupDescription: The subnet where the database will be placed
         SubnetIds: 
           - Fn::ImportValue:
-              Fn::Sub: "${EnvironmentName}-DATABASE-PRIV-NETS"
-        #   - Fn::ImportValue:
-        #       Fn::Sub: ${EnvironmentName}-PRI2-SN
-      Type: "AWS::RDS::DBSubnetGroup"
+              Fn::Sub: "${EnvironmentName}-PRIVATE-SUBNET-3"
+          - Fn::ImportValue:
+              Fn::Sub: "${EnvironmentName}-PRIVATE-SUBNET-4"
+      
       
     MyDB:
       Type: 'AWS::RDS::DBInstance'
