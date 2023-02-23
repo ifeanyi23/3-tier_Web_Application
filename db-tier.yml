@@ -62,10 +62,10 @@ Parameters:
       ConstraintDescription: must contain only alphanumeric characters.
       
 Resources:
-    InternalLoadBalancerSecGroup:
+    DBSecGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
-        GroupDescription: Allow http into our load balancer
+        GroupDescription: Allow access to our database from the app tier
         VpcId:
           Fn::ImportValue:
             !Sub "${EnvironmentName}-VPCID"
@@ -92,5 +92,19 @@ Resources:
         #   - Fn::ImportValue:
         #       Fn::Sub: ${EnvironmentName}-PRI2-SN
       Type: "AWS::RDS::DBSubnetGroup"
+      
+    MyDB:
+      Type: 'AWS::RDS::DBInstance'
+      Properties:
+        DBInstanceIdentifier: !Ref DBInstanceID
+        DBName: !Ref DBName
+        DBInstanceClass: !Ref DBInstanceClass
+        VPCSecurityGroups: !Ref DBSecGroup
+        DBSubnetGroupName: !Ref myDBSubnetGroup
+        AllocatedStorage: !Ref DBAllocatedStorage
+        Engine: MySQL
+        MasterUsername: !Ref DBUsername
+        MasterUserPassword: !Ref DBPassword
+      DeletionPolicy: "Retain"
     
     
